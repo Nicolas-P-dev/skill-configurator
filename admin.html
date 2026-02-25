@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIAM - Skill Configurator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafaf9;
+            --surface: #ffffff;
+            --border: #e8e8e4;
+            --border-light: #f0f0ec;
+            --text: #1a1a1a;
+            --text-mid: #6b6b6b;
+            --text-light: #a0a09a;
+            --brand: #1a1a1a;
+            --brand-text: #fafaf9;
+            --danger: #ff3b30;
+            --radius: 16px;
+            --radius-sm: 8px;
+            --font: 'DM Sans', -apple-system, sans-serif;
+            --mono: 'JetBrains Mono', monospace;
+            --shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border-light);
+            flex-shrink: 0;
+            background: var(--surface);
+        }
+
+        .topbar h1 {
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .topbar span {
+            color: var(--text-light);
+            margin-left: 8px;
+            font-weight: 400;
+            font-size: 13px;
+        }
+
+        /* ── Main Layout ── */
+        .container {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 240px;
+            border-right: 1px solid var(--border-light);
+            background: var(--surface);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+            flex-shrink: 0;
+        }
+
+        .sidebar-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-light);
+            padding: 0 20px 10px;
+        }
+
+        .team-list {
+            list-style: none;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .team-item {
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 2px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .team-item:hover {
+            background: var(--bg);
+        }
+
+        .team-item.active {
+            background: var(--bg);
+            border-left-color: var(--brand);
+            color: var(--brand);
+            font-weight: 600;
+        }
+
+        /* ── Content Area ── */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            background: var(--bg);
+        }
+
+        .content-header {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .content-title {
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+
+        .content-subtitle {
+            font-size: 13px;
+            color: var(--text-mid);
+        }
+
+        /* Buttons */
+        .btn {
+            font-family: var(--font);
+            font-size: 13px;
+            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--brand);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: transparent;
+            color: var(--danger);
+            border: 1px solid rgba(255, 59, 48, 0.2);
+        }
+
+        .btn-danger:hover {
+            background: rgba(255, 59, 48, 0.05);
+        }
+
+        /* ── Skills List ── */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .skill-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+
+        .skill-card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .skill-card h3 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .skill-card pre {
+            background: var(--bg);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--text-mid);
+            overflow-x: auto;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border-light);
+            white-space: pre-wrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            background: var(--surface);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius);
+        }
+
+        /* ── Editor Form ── */
+        .editor-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-mid);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            font-family: var(--font);
+            font-size: 14px;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg);
+            color: var(--text);
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group textarea {
+            font-family: var(--mono);
+            min-height: 180px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--text-mid);
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        /* Loader */
+        .loader {
+            opacity: 0.5;
+            font-size: 13px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="topbar">
+        <h1>aiam <span>Skill Configurator</span></h1>
+    </div>
+
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-title">Personal</div>
+            <ul class="team-list" id="personalList">
+                <li class="team-item active" data-type="user" data-id="dev-user">My Skills</li>
+            </ul>
+            <div class="sidebar-title" style="margin-top:20px;">Teams</div>
+            <ul class="team-list" id="teamList">
+                <li class="team-item" data-type="team" data-id="default">General (Default)</li>
+                <li class="team-item" data-type="team" data-id="frontend">Frontend</li>
+                <li class="team-item" data-type="team" data-id="backend">Backend</li>
+                <li class="team-item" data-type="team" data-id="devops">DevOps</li>
+                <li class="team-item" data-type="team" data-id="data-science">Data Science</li>
+            </ul>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="content-header">
+                <div>
+                    <h2 class="content-title" id="lblTeamName">General</h2>
+                    <p class="content-subtitle">Manage custom semantic rules and capabilities for this team.</p>
+                </div>
+            </div>
+
+            <!-- Existing Skills -->
+            <h3 style="margin-bottom: 12px; font-size: 16px;">Global DB Baseline Skills</h3>
+            <div id="globalContainer" style="margin-bottom: 40px;">
+                <div class="empty-state loader">Loading global defaults...</div>
+            </div>
+
+            <h3 style="margin-bottom: 12px; font-size: 16px;">Custom Skills</h3>
+            <div id="skillsContainer" style="margin-bottom: 40px;">
+                <div class="empty-state loader">Loading skills...</div>
+            </div>
+
+            <!-- Add Skill Form -->
+            <div class="editor-section" id="editorSection">
+                <h3 style="margin-bottom: 16px; font-size: 16px;">Add/Edit Skill</h3>
+                <div class="form-group" id="grpOverride" style="display:none;">
+                    <label style="color:var(--danger)">Overriding Baseline (Global ID)</label>
+                    <input type="text" id="inpOverrideTarget" readonly
+                        style="background:#fffafa; border-color: rgba(255, 59, 48, 0.2);">
+                    <button class="btn btn-danger" id="btnClearOverride"
+                        style="margin-top:8px; padding:4px 8px; font-size: 11px;">Cancel Override</button>
+                </div>
+                <div class="form-group">
+                    <label>Skill Name</label>
+                    <input type="text" id="inpName" placeholder="e.g., Code Review Guidelines" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Requires MCP Servers (Comma Separated)</label>
+                    <input type="text" id="inpMcp" placeholder="e.g., mcp-atlassian, mcp-kubernetes" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Markdown Instructions</label>
+                    <textarea id="inpContent" placeholder="# Rules&#10;1. Always do X&#10;2. Never do Y..."></textarea>
+                </div>
+                <div class="form-actions">
+                    <button class="btn btn-primary" id="btnSave">Save Skill</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8080/api/skills';
+        let currentOwnerType = 'user';
+        let currentOwnerId = 'dev-user';
+
+        const domTeamList = document.getElementById('teamList');
+        const domPersonalList = document.getElementById('personalList');
+        const domSkillsContainer = document.getElementById('skillsContainer');
+        const domGlobalContainer = document.getElementById('globalContainer');
+        const lblTeamName = document.getElementById('lblTeamName');
+
+        const grpOverride = document.getElementById('grpOverride');
+        const inpOverrideTarget = document.getElementById('inpOverrideTarget');
+        const btnClearOverride = document.getElementById('btnClearOverride');
+
+        const inpName = document.getElementById('inpName');
+        const inpMcp = document.getElementById('inpMcp');
+        const inpContent = document.getElementById('inpContent');
+        const btnSave = document.getElementById('btnSave');
+
+        // Escaping for HTML
+        function esc(str) {
+            return str ? str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+        }
+
+        // Sidebar Selection
+        function setupSidebar(listEl) {
+            listEl.addEventListener('click', (e) => {
+                const li = e.target.closest('.team-item');
+                if (!li) return;
+                document.querySelectorAll('.team-item').forEach(el => el.classList.remove('active'));
+                li.classList.add('active');
+
+                currentOwnerType = li.dataset.type;
+                currentOwnerId = li.dataset.id;
+                lblTeamName.textContent = li.textContent;
+
+                // clear form
+                inpName.value = '';
+                inpMcp.value = '';
+                inpContent.value = '';
+                btnClearOverride.click();
+
+                loadSkills();
+            });
+        }
+        setupSidebar(domTeamList);
+        setupSidebar(domPersonalList);
+
+        // Load Skills
+        async function loadSkills() {
+            domSkillsContainer.innerHTML = '<div class="empty-state loader">Loading...</div>';
+            domGlobalContainer.innerHTML = '<div class="empty-state loader">Loading...</div>';
+
+            try {
+                // 1. Load Globals
+                const resGlobal = await fetch(`${API_BASE}/global`);
+                const globals = await resGlobal.json();
+
+                if (globals.length === 0) {
+                    domGlobalContainer.innerHTML = `<div class="empty-state">No global baseline skills found.</div>`;
+                } else {
+                    let ghtml = '<div class="skills-grid">';
+                    globals.forEach(g => {
+                        const mcpBadge = (g.bound_mcp_servers || []).length > 0
+                            ? `<span style="font-size:11px; background:#e8e8e4; padding:2px 6px; border-radius:4px;">🔌 MCP: ${g.bound_mcp_servers.join(', ')}</span>`
+                            : '';
+                        ghtml += `
+                            <div class="skill-card">
+                                <div class="skill-card-header">
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <h3>${esc(g.name)}</h3>
+                                        <span style="font-size:11px; color:#a0a09a;">${esc(g.id)}</span>
+                                        ${mcpBadge}
+                                    </div>
+                                    <button class="btn btn-primary btn-override" 
+                                        data-id="${esc(g.id)}"
+                                        data-name="${esc(g.name)}"
+                                        data-mcp="${esc((g.bound_mcp_servers || []).join(', '))}"
+                                        data-content="${encodeURIComponent(g.content)}"
+                                    >Override this Baseline</button>
+                                </div>
+                                <pre>${esc(g.content)}</pre>
+                            </div>
+                        `;
+                    });
+                    ghtml += '</div>';
+                    domGlobalContainer.innerHTML = ghtml;
+                }
+
+                // 2. Load Custom
+                const res = await fetch(`${API_BASE}/${currentOwnerType}/${currentOwnerId}`);
+                if (!res.ok) throw new Error('Failed to load custom skills');
+                const skills = await res.json();
+
+                if (skills.length === 0) {
+                    domSkillsContainer.innerHTML = `<div class="empty-state">No custom skills defined for <strong>${esc(currentOwnerId)}</strong> yet.</div>`;
+                    return;
+                }
+
+                domSkillsContainer.innerHTML = '<div class="skills-grid"></div>';
+                const grid = domSkillsContainer.querySelector('.skills-grid');
+
+                skills.forEach(skill => {
+                    const card = document.createElement('div');
+                    card.className = 'skill-card';
+
+                    const mcpBadge = (skill.bound_mcp_servers || []).length > 0
+                        ? `<span style="font-size:11px; background:#e8e8e4; padding:2px 6px; border-radius:4px;">🔌 MCP: ${skill.bound_mcp_servers.join(', ')}</span>`
+                        : '';
+                    const overrideBadge = skill.override_target
+                        ? `<span style="font-size:11px; background:#ffebeb; color:var(--danger); padding:2px 6px; border-radius:4px;">⚠️ Overrides: ${esc(skill.override_target)}</span>`
+                        : '';
+
+                    card.innerHTML = `
+                        <div class="skill-card-header">
+                            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                                <h3>${esc(skill.name)}</h3>
+                                ${overrideBadge}
+                                ${mcpBadge}
+                            </div>
+                            <button class="btn btn-danger btn-delete" data-id="${skill.id}">Delete</button>
+                        </div>
+                        <pre>${esc(skill.content)}</pre>
+                    `;
+                    grid.appendChild(card);
+                });
+            } catch (err) {
+                domSkillsContainer.innerHTML = `<div class="empty-state" style="color:var(--danger)">Error connecting to server. Make sure the Python backend is running.</div>`;
+                domGlobalContainer.innerHTML = '';
+            }
+        }
+
+        // Override Button Logic
+        domGlobalContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-override')) {
+                const btn = e.target;
+                const id = btn.dataset.id;
+                grpOverride.style.display = 'block';
+                inpOverrideTarget.value = id;
+
+                // Pre-populate fields
+                inpName.value = btn.dataset.name || '';
+                inpMcp.value = btn.dataset.mcp || '';
+                inpContent.value = btn.dataset.content ? decodeURIComponent(btn.dataset.content) : '';
+
+                inpName.focus();
+                // Scroll to editor
+                document.getElementById('editorSection').scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+
+        btnClearOverride.addEventListener('click', () => {
+            grpOverride.style.display = 'none';
+            inpOverrideTarget.value = '';
+        });
+
+        // Save Skill
+        btnSave.addEventListener('click', async () => {
+            const name = inpName.value.trim();
+            const content = inpContent.value.trim();
+            if (!name || !content) {
+                alert("Please fill out both name and content.");
+                return;
+            }
+
+            const mcpInput = inpMcp.value.trim();
+            const mcp = mcpInput ? mcpInput.split(',').map(s => s.trim()).filter(Boolean) : null;
+            const overrideTarget = inpOverrideTarget.value || null;
+
+            btnSave.disabled = true;
+            btnSave.textContent = 'Saving...';
+
+            try {
+                const res = await fetch(`${API_BASE}/${currentOwnerType}/${currentOwnerId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        content,
+                        bound_mcp_servers: mcp,
+                        override_target: overrideTarget
+                    })
+                });
+
+                if (!res.ok) throw new Error(await res.text());
+
+                inpName.value = '';
+                inpMcp.value = '';
+                inpContent.value = '';
+                btnClearOverride.click();
+                loadSkills();
+            } catch (err) {
+                alert(`Error: ${err.message}`);
+            } finally {
+                btnSave.disabled = false;
+                btnSave.textContent = 'Save Skill';
+            }
+        });
+
+        // Delete Skill (event delegation)
+        domSkillsContainer.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('btn-delete')) {
+                const id = e.target.dataset.id;
+                if (!confirm("Are you sure you want to remove this skill?")) return;
+
+                e.target.textContent = '...';
+                try {
+                    const res = await fetch(`${API_BASE}/${currentOwnerType}/${currentOwnerId}/${id}`, { method: 'DELETE' });
+                    if (!res.ok) throw new Error('Deletion failed');
+                    loadSkills();
+                } catch (err) {
+                    alert(`Error: ${err.message}`);
+                    loadSkills();
+                }
+            }
+        });
+
+        // Initial load
+        lblTeamName.textContent = "My Skills";
+        loadSkills();
+
+    </script>
+</body>
+
+</html>

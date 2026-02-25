@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIAM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&family=JetBrains+Mono:wght@400&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #fafaf9;
+            --surface: #ffffff;
+            --border: #e8e8e4;
+            --border-light: #f0f0ec;
+            --text: #1a1a1a;
+            --text-mid: #6b6b6b;
+            --text-light: #a0a09a;
+            --user-bg: #1a1a1a;
+            --user-text: #fafaf9;
+            --agent-bg: #f3f3ef;
+            --radius: 20px;
+            --radius-sm: 14px;
+            --font: 'DM Sans', -apple-system, system-ui, sans-serif;
+            --mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+            --shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── Top bar ── */
+        .topbar {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            border-bottom: 1px solid var(--border-light);
+            flex-shrink: 0;
+        }
+
+        .topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .topbar h1 {
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: background 0.4s;
+        }
+
+        .dot.on {
+            background: #34c759;
+        }
+
+        .dot.err {
+            background: #ff3b30;
+        }
+
+        .topbar-right {
+            display: flex;
+            gap: 2px;
+        }
+
+        .ib {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .ib:hover {
+            background: var(--border-light);
+            color: var(--text);
+        }
+
+        .ib.active {
+            background: var(--border);
+            color: var(--text);
+        }
+
+        /* ── Drawer (settings) ── */
+        .drawer {
+            max-height: 0;
+            overflow: hidden;
+            border-bottom: 1px solid transparent;
+            transition: max-height 0.25s ease, border-color 0.25s;
+        }
+
+        .drawer.open {
+            max-height: 80px;
+            border-color: var(--border-light);
+        }
+
+        .drawer-inner {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 24px;
+            flex-wrap: wrap;
+        }
+
+        .field {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .field input,
+        .field select {
+            font-family: var(--mono);
+            font-size: 12px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            outline: none;
+            width: 220px;
+        }
+
+        .field select {
+            width: auto;
+        }
+
+        .field input:focus,
+        .field select:focus {
+            border-color: var(--text-light);
+        }
+
+        .ping-btn {
+            font-family: var(--font);
+            font-size: 11px;
+            font-weight: 500;
+            padding: 5px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-mid);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .ping-btn:hover {
+            border-color: var(--text-light);
+            color: var(--text);
+        }
+
+        /* ── Main layout ── */
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* ── Chat panel ── */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ── Messages ── */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .messages::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .msg {
+            max-width: 72%;
+            animation: fadeUp 0.2s ease;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+        }
+
+        .msg.agent {
+            align-self: flex-start;
+        }
+
+        .msg.note {
+            align-self: center;
+        }
+
+        .bubble {
+            padding: 12px 18px;
+            border-radius: var(--radius);
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .msg.user .bubble {
+            background: var(--user-bg);
+            color: var(--user-text);
+            border-bottom-right-radius: 6px;
+        }
+
+        .msg.agent .bubble {
+            background: var(--agent-bg);
+            color: var(--text);
+            border-bottom-left-radius: 6px;
+        }
+
+        .msg.note .bubble {
+            background: transparent;
+            color: var(--text-light);
+            font-size: 11px;
+            padding: 6px 14px;
+        }
+
+        /* Markdown in agent messages */
+        .msg.agent .bubble p {
+            margin-bottom: 8px;
+        }
+
+        .msg.agent .bubble p:last-child {
+            margin-bottom: 0;
+        }
+
+        .msg.agent .bubble ul,
+        .msg.agent .bubble ol {
+            margin: 6px 0 6px 20px;
+        }
+
+        .msg.agent .bubble li {
+            margin-bottom: 3px;
+        }
+
+        .msg.agent .bubble code {
+            font-family: var(--mono);
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .msg.agent .bubble pre {
+            background: rgba(0, 0, 0, 0.04);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+
+        .msg.agent .bubble pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .msg.agent .bubble strong {
+            font-weight: 500;
+        }
+
+        .msg.agent .bubble a {
+            color: var(--text-mid);
+            text-decoration: underline;
+        }
+
+        .meta {
+            font-size: 10px;
+            color: var(--text-light);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        .msg.user .meta {
+            text-align: right;
+        }
+
+        .typing {
+            align-self: flex-start;
+            display: flex;
+            gap: 5px;
+            padding: 16px 20px;
+            background: var(--agent-bg);
+            border-radius: var(--radius);
+            border-bottom-left-radius: 6px;
+        }
+
+        .typing span {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--text-light);
+            animation: bounce 1.2s infinite;
+        }
+
+        .typing span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+            text-align: center;
+            gap: 10px;
+            padding: 40px;
+        }
+
+        .empty .icon {
+            font-size: 28px;
+            opacity: 0.25;
+        }
+
+        .empty p {
+            font-size: 13px;
+            max-width: 300px;
+            line-height: 1.6;
+        }
+
+        .empty kbd {
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--agent-bg);
+            border: 1px solid var(--border);
+        }
+
+        /* ── Input area ── */
+        .input-area {
+            padding: 16px 24px 20px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .input-box {
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 6px 6px 6px 18px;
+            box-shadow: var(--shadow);
+            transition: border-color 0.15s;
+        }
+
+        .input-box:focus-within {
+            border-color: var(--text-light);
+        }
+
+        .input-box textarea {
+            flex: 1;
+            font-family: var(--font);
+            font-size: 14px;
+            border: none;
+            background: transparent;
+            color: var(--text);
+            resize: none;
+            outline: none;
+            min-height: 26px;
+            max-height: 120px;
+            line-height: 1.55;
+            padding: 5px 0;
+        }
+
+        .input-box textarea::placeholder {
+            color: var(--text-light);
+        }
+
+        .send-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            border: none;
+            background: var(--text);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            opacity: 0.8;
+        }
+
+        .send-btn:disabled {
+            opacity: 0.12;
+            cursor: default;
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* ── Inspector panel ── */
+        .insp {
+            width: 380px;
+            border-left: 1px solid var(--border-light);
+            background: var(--surface);
+            display: none;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .insp.open {
+            display: flex;
+        }
+
+        .insp-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .insp-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-light);
+            cursor: pointer;
+            border-bottom: 1.5px solid transparent;
+            transition: all 0.15s;
+        }
+
+        .insp-tab:hover {
+            color: var(--text-mid);
+        }
+
+        .insp-tab.on {
+            color: var(--text);
+            border-bottom-color: var(--text);
+        }
+
+        .insp-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px;
+        }
+
+        .insp-body::-webkit-scrollbar {
+            width: 0;
+        }
+
+        .json-block {
+            font-family: var(--mono);
+            font-size: 11px;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: var(--text-mid);
+            background: var(--bg);
+            padding: 14px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .json-block .label {
+            display: block;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            60%,
+            100% {
+                transform: translateY(0);
+            }
+
+            30% {
+                transform: translateY(-4px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top bar -->
+    <div class="topbar">
+        <div class="topbar-left">
+            <h1>aiam</h1>
+            <div class="dot" id="dot"></div>
+        </div>
+        <div class="topbar-right">
+            <button class="ib" id="btnSettings" title="Settings">⚙</button>
+            <button class="ib" id="btnInspector" title="Inspector">◐</button>
+            <button class="ib" id="btnClear" title="Clear">↺</button>
+        </div>
+    </div>
+
+    <!-- Settings drawer -->
+    <div class="drawer" id="drawer">
+        <div class="drawer-inner">
+            <div class="field">
+                <label>Endpoint</label>
+                <input id="cfgEndpoint" value="http://localhost:8080">
+            </div>
+            <div class="field">
+                <label>Session</label>
+                <input id="cfgSession" placeholder="auto" style="width:130px;">
+            </div>
+            <div class="field">
+                <label>User</label>
+                <input id="cfgUser" value="dev-user" style="width:100px;">
+            </div>
+            <div class="field">
+                <label>Team Profile</label>
+                <select id="cfgProfile" style="width:110px;">
+                    <option value="default">General</option>
+                    <option value="frontend">Frontend</option>
+                    <option value="backend">Backend</option>
+                    <option value="devops">DevOps</option>
+                    <option value="data-science">Data Sci</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Jira PAT</label>
+                <input id="cfgJiraPat" type="password" placeholder="optional" style="width:160px;"
+                    title="Jira Personal Access Token for authenticated requests">
+            </div>
+            <button class="ping-btn" id="btnPing">↻ Ping</button>
+        </div>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="chat-panel">
+            <div class="messages" id="messages">
+                <div class="empty" id="empty">
+                    <div class="icon">✦</div>
+                    <p>Send a message to the AIAM agent.<br>Toggle <kbd>◐</kbd> for raw A2A payloads.</p>
+                </div>
+            </div>
+            <div class="input-area">
+                <div class="input-box">
+                    <textarea id="input" rows="1" placeholder="Ask something…" autofocus></textarea>
+                    <button class="send-btn" id="btnSend" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inspector -->
+        <div class="insp" id="inspector">
+            <div class="insp-tabs">
+                <div class="insp-tab on" data-tab="request">Request</div>
+                <div class="insp-tab" data-tab="response">Response</div>
+                <div class="insp-tab" data-tab="log">Log</div>
+            </div>
+            <div class="insp-body" id="inspBody"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // ── Elements ──
+            const $ = id => document.getElementById(id);
+            const dot = $('dot'), msgs = $('messages'), empty = $('empty');
+            const input = $('input'), btnSend = $('btnSend');
+            const drawer = $('drawer'), inspector = $('inspector');
+            const inspBody = $('inspBody');
+            const cfgEndpoint = $('cfgEndpoint'), cfgSession = $('cfgSession');
+            const cfgUser = $('cfgUser'), cfgJiraPat = $('cfgJiraPat'), cfgProfile = $('cfgProfile');
+
+            // ── State ──
+            let sid = crypto.randomUUID();
+            let contextId = null;
+            let turnNum = 0;
+            let sending = false;
+            let tab = 'request';
+            let lastReq = null, lastRes = null;
+            let logs = [];
+
+            // ── Helpers ──
+            function ep() {
+                const v = cfgEndpoint.value.trim();
+                return v.endsWith('/') ? v.slice(0, -1) : v;
+            }
+            function sessionId() { return cfgSession.value.trim() || sid; }
+            function userId() { return cfgUser.value.trim() || 'dev-user'; }
+            function taskId() { return `t-${++turnNum}-${Date.now()}`; }
+
+            function setDot(s) {
+                dot.className = 'dot' + (s === 1 ? ' on' : s === 0 ? ' err' : '');
+            }
+
+            // ── Simple markdown ──
+            function md(text) {
+                if (!text) return '';
+                let h = text
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${c.trim()}</code></pre>`)
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+                // Paragraphs
+                h = h.split(/\n{2,}/).map(block => {
+                    block = block.trim();
+                    if (block.startsWith('<pre>')) return block;
+                    // List
+                    const lines = block.split('\n');
+                    if (lines.every(l => /^[-•*]\s/.test(l) || l.trim() === '')) {
+                        return '<ul>' + lines.filter(l => l.trim()).map(l => `<li>${l.replace(/^[-•*]\s*/, '')}</li>`).join('') + '</ul>';
+                    }
+                    if (lines.every(l => /^\d+[.)]\s/.test(l) || l.trim() === '')) {
+                        return '<ol>' + lines.filter(l => l.trim()).map(l => `<li>${l.replace(/^\d+[.)]\s*/, '')}</li>`).join('') + '</ol>';
+                    }
+                    return `<p>${block.replace(/\n/g, '<br>')}</p>`;
+                }).join('');
+                return h;
+            }
+
+            // ── Extract text from A2A response (handles all known shapes) ──
+            function extractText(data) {
+                const findText = (obj) => {
+                    if (!obj || typeof obj !== 'object') return null;
+                    // Direct parts array
+                    if (Array.isArray(obj.parts)) {
+                        const t = obj.parts.filter(p => p && p.text).map(p => p.text).join('\n');
+                        if (t) return t;
+                    }
+                    // Artifacts array (A2A SDK style)
+                    if (Array.isArray(obj.artifacts)) {
+                        const t = obj.artifacts.flatMap(a => (a.parts || [])).filter(p => p.text).map(p => p.text).join('\n');
+                        if (t) return t;
+                    }
+                    // Nested message/status
+                    if (obj.status?.message?.parts) {
+                        const t = obj.status.message.parts.filter(p => p.text).map(p => p.text).join('\n');
+                        if (t) return t;
+                    }
+                    if (obj.message?.parts) {
+                        const t = obj.message.parts.filter(p => p.text).map(p => p.text).join('\n');
+                        if (t) return t;
+                    }
+                    // Recurse into object values
+                    for (const v of Object.values(obj)) {
+                        if (Array.isArray(v)) {
+                            for (const item of v) {
+                                const r = findText(item);
+                                if (r) return r;
+                            }
+                        } else if (typeof v === 'object' && v !== null) {
+                            const r = findText(v);
+                            if (r) return r;
+                        }
+                    }
+                    return null;
+                };
+
+                if (data.result) {
+                    const r = data.result;
+                    // Try direct extraction first
+                    const direct = findText(r);
+                    if (direct) return direct;
+                    // Fallback
+                    return typeof r === 'string' ? r : JSON.stringify(r, null, 2);
+                }
+                if (data.error) return `Error ${data.error.code || ''}: ${data.error.message || JSON.stringify(data.error)}`;
+                return JSON.stringify(data, null, 2);
+            }
+
+            // ── Messages ──
+            function addMsg(type, text, meta) {
+                if (empty.parentNode) empty.remove();
+                const d = document.createElement('div');
+                d.className = `msg ${type}`;
+                if (type === 'agent') {
+                    d.innerHTML = `<div class="bubble">${md(text)}</div>${meta ? `<div class="meta">${meta}</div>` : ''}`;
+                } else if (type === 'user') {
+                    d.innerHTML = `<div class="bubble">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+                } else {
+                    d.innerHTML = `<div class="bubble">${text}</div>`;
+                }
+                msgs.appendChild(d);
+                msgs.scrollTop = msgs.scrollHeight;
+                return d;
+            }
+
+            function addTyping() {
+                const d = document.createElement('div');
+                d.className = 'typing'; d.id = 'typing';
+                d.innerHTML = '<span></span><span></span><span></span>';
+                msgs.appendChild(d);
+                msgs.scrollTop = msgs.scrollHeight;
+                return d;
+            }
+            function removeTyping() {
+                const t = $('typing'); if (t) t.remove();
+            }
+
+            // ── Inspector ──
+            function log(label, data) {
+                logs.push({ label, data: typeof data === 'string' ? data : JSON.stringify(data, null, 2), ts: new Date().toLocaleTimeString() });
+                if (tab === 'log') renderInsp();
+            }
+
+            function renderInsp() {
+                let html = '';
+                if (tab === 'request') {
+                    html = lastReq
+                        ? `<div class="json-block"><span class="label">Last Request</span>${esc(JSON.stringify(lastReq, null, 2))}</div>`
+                        : `<div class="json-block"><span class="label">Waiting…</span></div>`;
+                } else if (tab === 'response') {
+                    html = lastRes
+                        ? `<div class="json-block"><span class="label">Last Response</span>${esc(JSON.stringify(lastRes, null, 2))}</div>`
+                        : `<div class="json-block"><span class="label">Waiting…</span></div>`;
+                } else {
+                    html = logs.length
+                        ? logs.slice().reverse().map(l =>
+                            `<div class="json-block"><span class="label">${l.ts} · ${l.label}</span>${esc(l.data)}</div>`
+                        ).join('')
+                        : `<div class="json-block"><span class="label">No log entries</span></div>`;
+                }
+                inspBody.innerHTML = html;
+            }
+
+            function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+            // ── Build A2A payload ──
+            function buildPayload(text) {
+                const payload = {
+                    jsonrpc: '2.0',
+                    id: taskId(),
+                    method: 'message/send',
+                    params: {
+                        message: {
+                            role: 'user',
+                            parts: [{ type: 'text', text }],
+                            messageId: crypto.randomUUID()
+                        },
+                        configuration: {
+                            acceptedOutputModes: ['text']
+                        },
+                        teamProfile: cfgProfile ? cfgProfile.value : 'default',
+                        userProfile: 'dev-user'
+                    }
+                };
+                // Use contextId for session persistence (handles A2A task_id switching)
+                if (contextId) {
+                    payload.params.message.contextId = contextId;
+                }
+                return payload;
+            }
+
+            // ── Send ──
+            async function send(text) {
+                if (sending || !text.trim()) return;
+                sending = true;
+                btnSend.disabled = true;
+
+                const payload = buildPayload(text.trim());
+                lastReq = payload;
+                log('REQUEST', payload);
+                if (tab === 'request') renderInsp();
+
+                const t0 = performance.now();
+                addMsg('user', text.trim());
+                addTyping();
+
+                try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    const pat = cfgJiraPat.value.trim();
+                    if (pat) headers['X-Jira-PAT'] = pat;
+
+                    const resp = await fetch(ep() + '/', {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(payload)
+                    });
+
+                    const elapsed = Math.round(performance.now() - t0);
+                    const data = await resp.json();
+                    lastRes = data;
+                    log(`RESPONSE (${elapsed}ms, ${resp.status})`, data);
+                    if (tab === 'response') renderInsp();
+
+                    removeTyping();
+
+                    if (!resp.ok) {
+                        addMsg('note', `HTTP ${resp.status}: ${JSON.stringify(data).slice(0, 200)}`);
+                        setDot(0);
+                        return;
+                    }
+
+                    setDot(1);
+
+                    // Persist contextId from response for session continuity
+                    if (data.result?.contextId) {
+                        contextId = data.result.contextId;
+                    } else if (data.result?.message?.contextId) {
+                        contextId = data.result.message.contextId;
+                    }
+
+                    const agentText = extractText(data);
+                    addMsg('agent', agentText, `${elapsed}ms`);
+
+                } catch (err) {
+                    removeTyping();
+                    addMsg('note', `Network error: ${err.message}`);
+                    setDot(0);
+                    log('ERROR', err.message);
+                } finally {
+                    sending = false;
+                    btnSend.disabled = !input.value.trim();
+                }
+            }
+
+            // ── Auto-resize textarea ──
+            input.addEventListener('input', () => {
+                input.style.height = 'auto';
+                input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+                btnSend.disabled = !input.value.trim() || sending;
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (input.value.trim() && !sending) {
+                        send(input.value);
+                        input.value = '';
+                        input.style.height = 'auto';
+                        btnSend.disabled = true;
+                    }
+                }
+            });
+
+            btnSend.addEventListener('click', () => {
+                if (input.value.trim() && !sending) {
+                    send(input.value);
+                    input.value = '';
+                    input.style.height = 'auto';
+                    btnSend.disabled = true;
+                }
+            });
+
+            // ── Toggle buttons ──
+            $('btnSettings').addEventListener('click', function () {
+                drawer.classList.toggle('open');
+                this.classList.toggle('active');
+            });
+
+            $('btnInspector').addEventListener('click', function () {
+                inspector.classList.toggle('open');
+                this.classList.toggle('active');
+                renderInsp();
+            });
+
+            $('btnClear').addEventListener('click', () => {
+                // Remove all messages
+                while (msgs.firstChild) msgs.removeChild(msgs.firstChild);
+                // Re-add empty state
+                const e = document.createElement('div');
+                e.className = 'empty'; e.id = 'empty';
+                e.innerHTML = '<div class="icon">✦</div><p>Send a message to the AIAM agent.<br>Toggle <kbd>◐</kbd> for raw A2A payloads.</p>';
+                msgs.appendChild(e);
+                // Reset state
+                sid = crypto.randomUUID();
+                contextId = null;
+                cfgSession.value = '';
+                turnNum = 0;
+                logs = [];
+                lastReq = null; lastRes = null;
+                renderInsp();
+                setDot(-1);
+            });
+
+            // ── Inspector tabs ──
+            document.querySelectorAll('.insp-tab').forEach(t => {
+                t.addEventListener('click', function () {
+                    document.querySelectorAll('.insp-tab').forEach(x => x.classList.remove('on'));
+                    this.classList.add('on');
+                    tab = this.dataset.tab;
+                    renderInsp();
+                });
+            });
+
+            // ── Ping ──
+            $('btnPing').addEventListener('click', async () => {
+                log('PING', ep() + '/health');
+                try {
+                    const r = await fetch(ep() + '/health');
+                    const d = await r.json();
+                    setDot(1);
+                    addMsg('note', `connected · ${d.agent || 'aiam'}`);
+                    log('PONG', d);
+                } catch (e) {
+                    setDot(0);
+                    addMsg('note', `unreachable · ${e.message}`);
+                    log('PING FAIL', e.message);
+                }
+            });
+
+            // ── Auto-detect endpoint when deployed ──
+            if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                cfgEndpoint.value = location.origin;
+                fetch(location.origin + '/health').then(r => r.ok && setDot(1)).catch(() => { });
+            }
+
+        })();
+    </script>
+</body>
+
+</html>
