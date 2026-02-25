@@ -1,47 +1,74 @@
-# AIAM Skill Framework: Authoring Guide
+# AIAM Skill Framework: Developer Integration Guide
 
-The AIAM Skill Framework is incredibly modular. It is designed so that non-technical users and admins can instantly inject, modify, or strip behaviors from the core agent without changing the LLM execution code. 
+The AIAM Skill Framework allows you to natively add distinct features, behaviors, and MCP server integrations into the core agent without changing the prompt logic for unrelated workflows.
 
-There are two primary ways to add skills, depending on the scope of the rule.
-
----
-
-## 1. Global Baseline Skills (Codebase)
-
-Global skills represent company-wide standards and best practices (e.g., "Company-Wide Jira Standards", "Python Best Practices"). These ship inside the Git repository with the AIAM agent codebase.
-
-### How to Add a Global Skill:
-1. Navigate to the `skills/default/` directory in the repository.
-2. Create a new `.md` file (e.g., `git-commit-rules.md`).
-3. Write your instructions using standard Markdown. State clear, concise rules for the agent.
-
-### Conventions:
-* **Filenames:** Use lowercase with hyphens (kebab-case). The Python backend automatically parses the filename into the display name.
-  * *Example:* `python-best-practices.md` becomes the title "Python Best Practices".
-* **Formatting:** Use strong headings and short bullet points. The LLM parses formatted lists and explicit constraints much better than large paragraphs.
-* **MCP Binding:** By default, if a skill requires an external Model Context Protocol (MCP) tool like `mcp-gitlab` or `mcp-atlassian`, the mapping is configured in the `get_global_skills()` function inside `server.py` to ensure it dynamically bounds the right external context.
+This guide outlines how developers should structure, write, and map new Agent Skills.
 
 ---
 
-## 2. Team & Personal Skills (UI Configurator)
+## 1. Creating the Markdown Baseline
 
-Team and Personal skills allow specific groups (e.g., "Frontend") or users to override the global baseline or add hyper-specific workflows without cluttering the global prompt for everyone else.
+All core system behaviors ship natively inside the repository as fallback defaults ("Global Skills"). This ensures an infinitely scalable codebase without an extremely bloated main system prompt.
 
-### How to Add via UI:
-1. Open the Skill Configurator (`admin.html`).
-2. Select your Team or Personal profile from the sidebar.
-3. To **Add a completely new workflow**: Fill out the form at the bottom, specify any MCP servers (comma-separated, e.g., `mcp-kubernetes`), and click Save.
-4. To **Override a Global Skill**: Find the Global DB Baseline Rules in the configurator and click the "Override this Baseline" button. The UI will instantly clone the global rules into your custom editor. You can then delete, append, or modify the company standards to fit your personal workflow. Click Save.
+1. Create a `.md` file in `skills/default/` (e.g., `skills/default/gitlab-release-manager.md`).
+2. Write rules strictly and affirmatively.
 
-### Conventions:
-* **Rule Collisions:** If you override a Global Skill, the framework completely drops the global rule and *only* injects your custom override. Do not delete standard rules in your template modification unless you explicitly want the agent to ignore them.
-* **Micro-Skills:** Keep custom skills small and focused. Create one skill for "Deployment Rules", a separate one for "Code Formatting", and a third for "Jira Creation". This allows the backend to intelligently decouple the LLM token load.
-* **MCP Server Names:** Ensure you use the exact MCP server identifier configured in your production environment (e.g., `mcp-atlassian`, `mcp-gitlab`).
+### Markdown Best Practices:
+* **The "Zero-Shot" Rule:** The AIAM agent only gets the active skills injected into its prompt. Write the markdown file so that an AI agent reading *only* this file natively knows how to execute the workflow.
+* **Few-Shot Examples:** Provide JSON templates, conventional commit formats, or sample query structures inside codeblocks in your markdown.
+* **Avoid Generalities:** "Be helpful" or "Write good code" wastes tokens. Use "Enforce Google PEP8 Style" or "All Python functions must include NumPy docstrings."
+
+**Example (`skills/default/gitlab-release-manager.md`):**
+```markdown
+# GitLab Release Manager Rules
+You are responsible for cutting releases in GitLab.
+1. Always run the `get_open_merge_requests` tool before drafting the release notes.
+2. Group release notes into `Features` and `Bug Fixes`.
+3. If an MR title does not follow Conventional Commits (e.g., `feat: ...`), flag it back to the user.
+```
 
 ---
 
-## 3. Best Practices for Writing AI Rules
+## 2. Binding MCP Servers (Tools)
 
-* **Be Absolute:** Use words like "Always", "Never", "Must". This acts as a strict guardrail for the LLM.
-* **Provide Examples:** If enforcing a specific JSON schema, conventional commit message format, or Terraform block architecture, provide a tiny code block example in the markdown. The LLM learns best through these "few-shot" examples.
-* **Avoid Duplication:** Do not write rules that are already defined in the Global Baseline unless you are explicitly overriding that baseline. Rely on the inheritance mechanism to keep your personal prompt clean and fast.
+To give your new Skill the actual *capabilities* to execute its rules (e.g., retrieving GitLab MRs), you must bind it to the relevant Model Context Protocol (MCP) server integration. 
+
+The backend aggregates all active rules and deduplicates their bound MCP servers, ensuring that the agent's context window contains *only* the tools it actually needs for that specific user.
+
+### Updating `server.py`
+In the backend router `get_global_skills()`, intercept your new file and append the `bound_mcp_servers` JSON array.
+
+```python
+def get_global_skills() -> List[dict]:
+    globals = []
+    # ... directory iteration ...
+        mcp_servers = []
+        
+        # 1. Bind your custom skill to an external MCP tool
+        if file_path.name == "gitlab-release-manager.md":
+            mcp_servers = ["mcp-gitlab"]
+            
+        # 2. Add other bindings as needed...
+        elif "jira" in name.lower():
+            mcp_servers = ["mcp-atlassian"]
+
+        globals.append({
+            "id": file_path.name,
+            "name": name,
+            "content": content,
+            "bound_mcp_servers": mcp_servers
+        })
+    return globals
+```
+
+---
+
+## 3. How the AI Context Mapping Works
+
+Once you commit `skills/default/something-new.md` and define its `bound_mcp_servers` in Python:
+
+1. **Discovery:** The UI configurator instantly identifies the new capability via the `/api/skills/global` endpoint.
+2. **Overrides:** Teams can see this new GitLab template and press "Override this Baseline" to add their own internal release-branching strategies to it.
+3. **Execution:** When a user chats with AIAM, the backend resolves the hierarchy (Global → Team → Personal). If the user is a `devops` engineer that uses the GitLab Release Manager, AIAM injects your `.md` prompt rules and strictly loads the tools exposed by `mcp-gitlab`. 
+
+If a Data Scientist talks to the agent, the `gitlab-release-manager` logic and tools are entirely omitted from the prompt, saving tokens and compute!
